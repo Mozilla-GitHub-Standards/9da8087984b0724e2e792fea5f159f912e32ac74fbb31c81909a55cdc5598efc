@@ -62,7 +62,18 @@ Host.prototype = {
 			    'tcp:' + DEFAULT_PORT]);
     adb.on('close', function() {
       debug('Set adb forward to ' + port);
-      callback();
+      var adbStart = spawn('adb', ['shell', 'stop', 'b2g']);
+      adbStart.on('close', function() {
+
+        var adbStop = spawn('adb', ['shell', 'start', 'b2g']);
+        adbStop.on('close', function() {
+          // Note: you need to wait for marionette to be ready.
+          // The marionette client should do that for you.
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=1033402
+          // Callback still needs to be called Asynchronously
+          setTimeout(callback, 0);
+        });
+      });
     });
     adb.stdout.on('data', function (data) {
       console.error('(start) stdout: ' + data);
