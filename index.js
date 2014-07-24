@@ -16,10 +16,19 @@ const DEFAULT_PORT = 2828;
  */
 function Host(options) {
   this.options = options || {};
-  if (!this.options.host)
+  if (!this.options.host) {
     this.options.host = 'localhost';
-  if (!this.options.port)
+  }
+  if (!this.options.port) {
     this.options.port = DEFAULT_PORT;
+  }
+  if ('RESTART_B2G' in process.env) {
+    this.options.restart = process.env.RESTART_B2G === '0' ? false : true;
+  }
+  if (this.options.restart === undefined
+      || this.options.restart === null) {
+    this.options.restart = true;
+  }
 }
 
 /**
@@ -54,6 +63,7 @@ Host.prototype = {
       debug('port was not set. Using default.');
       options.port = this.port;
     }
+    // restart is not overridden here.
 
     this.port = options.port;
     var port = this.port;
@@ -62,6 +72,12 @@ Host.prototype = {
 			    'tcp:' + DEFAULT_PORT]);
     adb.on('close', function() {
       debug('Set adb forward to ' + port);
+      if (!this.options.restart) {
+        debug('not restarting');
+        callback();
+        return;
+      }
+      debug('restarting b2g');
       var adbStart = spawn('adb', ['shell', 'stop', 'b2g']);
       adbStart.on('close', function() {
 
@@ -74,7 +90,7 @@ Host.prototype = {
           setTimeout(callback, 0);
         });
       });
-    });
+    }.bind(this));
     adb.stdout.on('data', function (data) {
       console.error('(start) stdout: ' + data);
     });
